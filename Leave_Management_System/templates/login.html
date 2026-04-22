@@ -9,6 +9,18 @@
                 <p class="auth-subtitle">Login to your account</p>
             </div>
 
+            <!-- Login Type Selector -->
+            <div class="login-type-selector">
+                <button type="button" class="login-type-btn active" data-type="employee" onclick="switchLoginType('employee')">
+                    <span class="login-type-icon">👤</span>
+                    <span class="login-type-label">Employee</span>
+                </button>
+                <button type="button" class="login-type-btn" data-type="admin" onclick="switchLoginType('admin')">
+                    <span class="login-type-icon">🔐</span>
+                    <span class="login-type-label">Admin</span>
+                </button>
+            </div>
+
             <form method="POST" action="{{ url_for('login') }}" class="auth-form">
                 <div class="form-group">
                     <label for="username" class="form-label">Username</label>
@@ -45,24 +57,35 @@
                 <button type="submit" class="btn btn-primary btn-large">Login</button>
             </form>
 
-            <div class="auth-divider">
-                <span>OR</span>
+            <!-- Employee Only Links -->
+            <div class="employee-only-section" id="employee-only-section">
+                <div class="auth-divider">
+                    <span>OR</span>
+                </div>
+
+                <div class="auth-links">
+                    <p class="auth-link-text">
+                        Don't have an account? 
+                        <a href="{{ url_for('register') }}" class="link-primary">Sign up here</a>
+                    </p>
+                </div>
             </div>
 
-            <div class="auth-links">
-                <p class="auth-link-text">
-                    Don't have an account? 
-                    <a href="{{ url_for('register') }}" class="link-primary">Sign up here</a>
-                </p>
+            <!-- Admin Only Links -->
+            <div class="admin-only-section" id="admin-only-section" style="display: none;">
+                <div class="admin-notice">
+                    <p class="admin-notice-title">⚠️ Admin Access Only</p>
+                    <p class="admin-notice-text">This login is restricted to system administrators. Unauthorized access attempts will be logged.</p>
+                </div>
             </div>
         </div>
 
         <div class="auth-info-section">
             <div class="auth-info-content">
                 <h2>Leave Management System</h2>
-                <p>Efficiently manage employee leave requests and maintain accurate records.</p>
+                <p id="info-subtitle">Efficiently manage your employee leave requests and maintain accurate records.</p>
                 
-                <div class="features-list">
+                <div class="features-list" id="features-list">
                     <div class="feature-item">
                         <span class="feature-icon">✓</span>
                         <span class="feature-text">Easy leave management</span>
@@ -77,11 +100,154 @@
                     </div>
                     <div class="feature-item">
                         <span class="feature-icon">✓</span>
-                        <span class="feature-text">Admin dashboard</span>
+                        <span class="feature-text">Leave history</span>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+    /* Login Type Selector */
+    .login-type-selector {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .login-type-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 1rem;
+        border: 2px solid #e0e0e0;
+        background: #f8f9fa;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #666;
+    }
+
+    .login-type-btn:hover {
+        border-color: #667eea;
+        background: #f0f4ff;
+    }
+
+    .login-type-btn.active {
+        border-color: #667eea;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .login-type-icon {
+        font-size: 1.5rem;
+    }
+
+    .login-type-label {
+        font-size: 0.9rem;
+    }
+
+    /* Admin Notice */
+    .admin-notice {
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-top: 1.5rem;
+    }
+
+    .admin-notice-title {
+        font-weight: 600;
+        color: #856404;
+        margin-bottom: 0.5rem;
+        font-size: 1rem;
+    }
+
+    .admin-notice-text {
+        color: #856404;
+        font-size: 0.9rem;
+        margin: 0;
+        line-height: 1.5;
+    }
+
+    /* Employee Only Section */
+    .employee-only-section,
+    .admin-only-section {
+        transition: all 0.3s ease;
+    }
+
+    @media (max-width: 768px) {
+        .login-type-selector {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<script>
+    function switchLoginType(type) {
+        // Update button active state
+        document.querySelectorAll('.login-type-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        document.querySelector(`[data-type="${type}"]`).classList.add('active');
+
+        // Update form sections
+        const employeeSection = document.getElementById('employee-only-section');
+        const adminSection = document.getElementById('admin-only-section');
+        const infoSubtitle = document.getElementById('info-subtitle');
+        const featuresList = document.getElementById('features-list');
+
+        if (type === 'admin') {
+            employeeSection.style.display = 'none';
+            adminSection.style.display = 'block';
+            infoSubtitle.textContent = 'Manage all employee leave requests, approvals, and system administration.';
+            featuresList.innerHTML = `
+                <div class="feature-item">
+                    <span class="feature-icon">✓</span>
+                    <span class="feature-text">Employee management</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">✓</span>
+                    <span class="feature-text">Leave approval system</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">✓</span>
+                    <span class="feature-text">System administration</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">✓</span>
+                    <span class="feature-text">Comprehensive reports</span>
+                </div>
+            `;
+        } else {
+            employeeSection.style.display = 'block';
+            adminSection.style.display = 'none';
+            infoSubtitle.textContent = 'Efficiently manage your employee leave requests and maintain accurate records.';
+            featuresList.innerHTML = `
+                <div class="feature-item">
+                    <span class="feature-icon">✓</span>
+                    <span class="feature-text">Easy leave management</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">✓</span>
+                    <span class="feature-text">Real-time tracking</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">✓</span>
+                    <span class="feature-text">Secure authentication</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">✓</span>
+                    <span class="feature-text">Leave history</span>
+                </div>
+            `;
+        }
+    }
+</script>
 {% endblock %}
