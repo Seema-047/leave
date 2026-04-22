@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard-layout">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <span class="sidebar-avatar">👤</span>
+            <div class="sidebar-username">{{ employee['name'] if employee else session['username'] }}</div>
+        </div>
+        <nav class="sidebar-nav">
+            <ul>
+                <li><a href="{{ url_for('dashboard') }}" class="sidebar-link">🏠 Dashboard</a></li>
+                <li><a href="{{ url_for('apply_leave') }}" class="sidebar-link">📝 Apply for Leave</a></li>
+                <li><a href="#leave-history" class="sidebar-link">📅 Leave History</a></li>
+                <li><a href="{{ url_for('logout') }}" class="sidebar-link">🚪 Logout</a></li>
+            </ul>
+        </nav>
+    </aside>
+    <main class="dashboard-main">
+        <div class="dashboard">
+            <h1>👤 Employee Dashboard</h1>
+            <div class="dashboard-cards">
+                {% if employee %}
+                <div class="card">
+                    <h3>👤 Your Information</h3>
+                    <p><strong>Name:</strong> {{ employee['name'] }}</p>
+                    <p><strong>Leave Balance:</strong> <span class="balance-display">{{ employee['leave_balance'] }}</span> days</p>
+                    <p><strong>Used Leave:</strong> <span class="balance-display">{{ employee['leave_balance'] - remaining_balance }}</span> days</p>
+                    <p><strong>Remaining Leave:</strong> <span class="balance-display balance-remaining">{{ remaining_balance }}</span> days</p>
+                </div>
+                {% endif %}
+                <div class="card">
+                    <a href="{{ url_for('apply_leave') }}" class="btn btn-success">📝 Apply for Leave</a>
+                </div>
+            </div>
+            <div class="dashboard-section" id="leave-history">
+                <h2>📅 Your Leave History</h2>
+                {% if leaves %}
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Leave Type</th>
+                            <th>Start Date</th>
+                            <th>End Date</th>
+                            <th>Duration</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for leave in leaves %}
+                        <tr>
+                            <td>{{ leave['id'] }}</td>
+                            <td><span class="badge badge-{{ 'danger' if leave['leave_type'] == 'Sick' else 'warning' if leave['leave_type'] == 'Casual' else 'primary' }}">{{ leave['leave_type'] }}</span></td>
+                            <td>{{ leave['start_date'] }}</td>
+                            <td>{{ leave['end_date'] }}</td>
+                            <td>
+                                {% set start = leave['start_date']|string %}
+                                {% set end = leave['end_date']|string %}
+                                {{ ((end|replace('-', '')|int - start|replace('-', '')|int) / 100 + (end|replace('-', '')|int % 100 - start|replace('-', '')|int % 100)) + 1 }} days
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="no-data">No leave records found. Apply for leave to get started!</p>
+                {% endif %}
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}

@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="form-container">
+    <h1>📝 Apply for Leave</h1>
+    
+    <form method="POST" action="{{ url_for('apply_leave') }}" class="form">
+        <div class="form-group">
+            <label for="leave_type">Leave Type:</label>
+            <select id="leave_type" name="leave_type" required>
+                <option value="">-- Choose leave type --</option>
+                <option value="Sick">🤒 Sick Leave</option>
+                <option value="Casual">😎 Casual Leave</option>
+                <option value="Annual">📅 Annual Leave</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="start_date">Start Date:</label>
+            <input type="date" id="start_date" name="start_date" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="end_date">End Date:</label>
+            <input type="date" id="end_date" name="end_date" required>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-success">✅ Submit Leave Application</button>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">❌ Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

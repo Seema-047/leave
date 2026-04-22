@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="form-container">
+    <h1>✏️ Edit Leave Record</h1>
+    
+    <form method="POST" action="{{ url_for('edit_leave', leave_id=leave['id']) }}" class="form">
+        <div class="form-group">
+            <label for="employee_id">Select Employee:</label>
+            <select id="employee_id" name="employee_id" required>
+                {% for emp in employees %}
+                <option value="{{ emp['id'] }}" {% if emp['id'] == leave['employee_id'] %}selected{% endif %}>{{ emp['name'] }} (Balance: {{ emp['leave_balance'] }} days)</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="leave_type">Leave Type:</label>
+            <select id="leave_type" name="leave_type" required>
+                <option value="Sick" {% if leave['leave_type'] == 'Sick' %}selected{% endif %}>🤒 Sick Leave</option>
+                <option value="Casual" {% if leave['leave_type'] == 'Casual' %}selected{% endif %}>😎 Casual Leave</option>
+                <option value="Annual" {% if leave['leave_type'] == 'Annual' %}selected{% endif %}>📅 Annual Leave</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="start_date">Start Date:</label>
+            <input type="date" id="start_date" name="start_date" value="{{ leave['start_date'] }}" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="end_date">End Date:</label>
+            <input type="date" id="end_date" name="end_date" value="{{ leave['end_date'] }}" required>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-success">✅ Update Leave Record</button>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">❌ Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+/* Layout */
+.layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 240px;
+    background: linear-gradient(180deg, #6a5acd, #8a2be2);
+    color: white;
+    padding: 20px;
+}
+
+.sidebar h2 {
+    margin-bottom: 25px;
+}
+
+.sidebar ul {
+    list-style: none;
+    padding: 0;
+}
+
+.sidebar ul li {
+    margin: 15px 0;
+}
+
+.sidebar ul li a {
+    color: white;
+    text-decoration: none;
+    font-weight: 500;
+    display: block;
+    padding: 8px;
+    border-radius: 6px;
+}
+
+.sidebar ul li a:hover {
+    background: rgba(255,255,255,0.2);
+}
+
+/* Main Content */
+.main-content {
+    flex: 1;
+    padding: 20px;
+    background: #f5f6fa;
+}
+
+/* Buttons spacing */
+.admin-actions {
+    margin-bottom: 20px;
+}
+</style>
+
+<div class="layout">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h2>👑 Admin</h2>
+        <ul>
+            <li><a href="#">🏠 Dashboard</a></li>
+            <li><a href="{{ url_for('add_employee') }}">👤 Add Employee</a></li>
+            <li><a href="{{ url_for('add_leave') }}">📅 Add Leave</a></li>
+            <li><a href="#">📊 Employees</a></li>
+            <li><a href="#">📁 Leave Records</a></li>
+            <li><a href="{{ url_for('logout') }}">🚪 Logout</a></li>
+        </ul>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="dashboard">
+            <h1>👑 Admin Dashboard</h1>
+            
+            <div class="admin-actions">
+                <a href="{{ url_for('add_employee') }}" class="btn btn-success">➕ Add Employee</a>
+                <a href="{{ url_for('add_leave') }}" class="btn btn-success">➕ Add Leave Record</a>
+            </div>
+
+            <!-- Employee Section -->
+            <div class="dashboard-section">
+                <h2>📊 Employee List</h2>
+                {% if employees %}
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Leave Balance</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for employee in employees %}
+                        <tr>
+                            <td>{{ employee['id'] }}</td>
+                            <td>{{ employee['name'] }}</td>
+                            <td>{{ employee['leave_balance'] }} days</td>
+                            <td><span class="badge badge-info">View</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="no-data">No employees found.</p>
+                {% endif %}
+            </div>
+
+            <!-- Leave Section -->
+            <div class="dashboard-section">
+                <h2>📅 Leave Records</h2>
+                {% if leaves %}
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Employee</th>
+                            <th>Leave Type</th>
+                            <th>Start Date</th>
+                            <th>End Date</th>
+                            <th>Duration</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for leave in leaves %}
+                        <tr>
+                            <td>{{ leave['id'] }}</td>
+                            <td>{{ leave['name'] }}</td>
+                            <td>
+                                <span class="badge badge-{{ 'danger' if leave['leave_type'] == 'Sick' else 'warning' if leave['leave_type'] == 'Casual' else 'primary' }}">
+                                    {{ leave['leave_type'] }}
+                                </span>
+                            </td>
+                            <td>{{ leave['start_date'] }}</td>
+                            <td>{{ leave['end_date'] }}</td>
+                            <td>
+                                {% set start = leave['start_date']|string %}
+                                {% set end = leave['end_date']|string %}
+                                {{ ((end|replace('-', '')|int - start|replace('-', '')|int) / 100 + (end|replace('-', '')|int % 100 - start|replace('-', '')|int % 100)) + 1 }} days
+                            </td>
+                            <td>
+                                <a href="{{ url_for('edit_leave', leave_id=leave['id']) }}" class="btn btn-sm btn-warning">✏️ Edit</a>
+                                <a href="{{ url_for('delete_leave', leave_id=leave['id']) }}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">🗑️ Delete</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="no-data">No leave records found.</p>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}
