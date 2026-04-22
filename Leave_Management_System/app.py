@@ -4,6 +4,8 @@ import sqlite3
 import hashlib
 import os
 from functools import wraps
+import secrets
+import string
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key_change_this'
@@ -25,13 +27,17 @@ def init_db():
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     username TEXT UNIQUE NOT NULL,
                     password TEXT NOT NULL,
-                    role TEXT NOT NULL CHECK(role IN ('admin', 'employee'))
+                    role TEXT NOT NULL CHECK(role IN ('admin', 'employee')),
+                    reset_token TEXT,
+                    reset_token_expiry DATETIME
                 );
                 
                 CREATE TABLE employees (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER,
                     name TEXT NOT NULL,
-                    leave_balance INTEGER NOT NULL DEFAULT 20
+                    leave_balance INTEGER NOT NULL DEFAULT 20,
+                    FOREIGN KEY (user_id) REFERENCES users(id)
                 );
                 
                 CREATE TABLE leaves (
@@ -43,18 +49,36 @@ def init_db():
                     FOREIGN KEY (employee_id) REFERENCES employees(id)
                 );
             ''')
-            # Insert test users
+            # Insert admin user only
             admin_pass = hash_password('admin123')
-            emp_pass = hash_password('emp123')
             db.execute("INSERT OR IGNORE INTO users (username, password, role) VALUES ('admin', ?, 'admin')", (admin_pass,))
-            db.execute("INSERT OR IGNORE INTO users (username, password, role) VALUES ('employee', ?, 'employee')", (emp_pass,))
-            db.execute("INSERT OR IGNORE INTO employees (name, leave_balance) VALUES ('John Doe', 20)")
             db.commit()
             db.close()
 
 # Hash password
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
+
+# Generate reset token
+def generate_reset_token():
+    return secrets.token_urlsafe(32)
+
+# Validate reset token
+def validate_reset_token(username, token):
+    db = get_db()
+    user = db.execute('SELECT * FROM users WHERE username = ? AND reset_token = ?', (username, token)).fetchone()
+    db.close()
+    
+    if not user:
+        return None
+    
+    # Check if token has expired (24 hours)
+    if user['reset_token_expiry']:
+        expiry = datetime.strptime(user['reset_token_expiry'], '%Y-%m-%d %H:%M:%S')
+        if datetime.now() > expiry:
+            return None
+    
+    return user
 
 # Login required decorator
 def login_required(f):
@@ -123,6 +147,68 @@ def logout():
     flash('You have been logged out', 'info')
     return redirect(url_for('login'))
 
+@app.route('/forgot_password', methods=['GET', 'POST'])
+def forgot_password():
+    if request.method == 'POST':
+        username = request.form['username']
+        
+        db = get_db()
+        user = db.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
+        
+        if user:
+            # Generate reset token
+            token = generate_reset_token()
+            expiry = datetime.now() + timedelta(hours=24)
+            
+            db.execute('UPDATE users SET reset_token = ?, reset_token_expiry = ? WHERE username = ?',
+                      (token, expiry.strftime('%Y-%m-%d %H:%M:%S'), username))
+            db.commit()
+            
+            # In a real app, send email with reset link
+            # For now, display the reset link (for demo purposes)
+            reset_url = url_for('reset_password', username=username, token=token, _external=True)
+            flash(f'Password reset link: {reset_url}', 'info')
+            flash('A password reset link has been generated. Use it within 24 hours.', 'success')
+        else:
+            flash('Username not found', 'danger')
+        
+        db.close()
+        return redirect(url_for('login'))
+    
+    return render_template('forgot_password.html')
+
+@app.route('/reset_password/<username>/<token>', methods=['GET', 'POST'])
+def reset_password(username, token):
+    user = validate_reset_token(username, token)
+    
+    if not user:
+        flash('Invalid or expired reset token', 'danger')
+        return redirect(url_for('login'))
+    
+    if request.method == 'POST':
+        new_password = request.form['password']
+        confirm_password = request.form['confirm_password']
+        
+        if new_password != confirm_password:
+            flash('Passwords do not match', 'danger')
+            return render_template('reset_password.html', username=username, token=token)
+        
+        if len(new_password) < 6:
+            flash('Password must be at least 6 characters long', 'danger')
+            return render_template('reset_password.html', username=username, token=token)
+        
+        db = get_db()
+        hashed_pass = hash_password(new_password)
+        db.execute('UPDATE users SET password = ?, reset_token = NULL, reset_token_expiry = NULL WHERE username = ?',
+                  (hashed_pass, username))
+        db.commit()
+        db.close()
+        
+        flash('Password reset successful! You can now login with your new password.', 'success')
+        return redirect(url_for('login'))
+    
+    return render_template('reset_password.html', username=username, token=token)
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -141,18 +227,35 @@ def register():
             db.close()
             return render_template('register.html')
         
-        # Insert user
-        hashed_pass = hash_password(password)
-        cursor = db.execute('INSERT INTO users (username, password, role) VALUES (?, ?, "employee")', (username, hashed_pass))
-        user_id = cursor.lastrowid
+        # Validate inputs
+        if len(password) < 6:
+            flash('Password must be at least 6 characters long', 'danger')
+            db.close()
+            return render_template('register.html')
         
-        # Insert employee
-        db.execute('INSERT INTO employees (name, leave_balance) VALUES (?, ?)', (name, leave_balance))
-        db.commit()
-        db.close()
+        if leave_balance < 0:
+            flash('Leave balance cannot be negative', 'danger')
+            db.close()
+            return render_template('register.html')
         
-        flash(f'Registered successfully! Welcome {name}. You can now login with your username and password.', 'success')
-        return redirect(url_for('login'))
+        try:
+            # Insert user first
+            hashed_pass = hash_password(password)
+            cursor = db.execute('INSERT INTO users (username, password, role) VALUES (?, ?, "employee")', (username, hashed_pass))
+            user_id = cursor.lastrowid
+            
+            # Insert employee linked to user
+            db.execute('INSERT INTO employees (user_id, name, leave_balance) VALUES (?, ?, ?)', (user_id, name, leave_balance))
+            db.commit()
+            
+            flash(f'Registration successful! Welcome {name}. You can now login with your username and password.', 'success')
+            return redirect(url_for('login'))
+        except Exception as e:
+            db.rollback()
+            flash('An error occurred during registration. Please try again.', 'danger')
+            return render_template('register.html')
+        finally:
+            db.close()
     
     return render_template('register.html')
 
@@ -170,17 +273,18 @@ def admin_dashboard():
 def employee_dashboard():
     db = get_db()
     
-    all_employees = db.execute('SELECT * FROM employees').fetchall()
-    employee_id = all_employees[0]['id'] if all_employees else None
+    # Get employee record for the logged-in user
+    employee = db.execute('SELECT * FROM employees WHERE user_id = ?', (session['user_id'],)).fetchone()
     
-    employee = None
+    employee_id = employee['id'] if employee else None
     leaves = []
     remaining_balance = 0
     
     if employee_id:
-        employee = db.execute('SELECT * FROM employees WHERE id = ?', (employee_id,)).fetchone()
-        leaves = db.execute('SELECT * FROM leaves WHERE employee_id = ?', (employee_id,)).fetchall()
+        leaves = db.execute('SELECT * FROM leaves WHERE employee_id = ? ORDER BY start_date DESC', (employee_id,)).fetchall()
         remaining_balance = calculate_remaining_balance(db, employee_id)
+    else:
+        flash('No employee profile found. Please contact admin.', 'warning')
     
     db.close()
     return render_template('employee_dashboard.html', employee=employee, leaves=leaves, remaining_balance=remaining_balance)
@@ -307,17 +411,27 @@ def apply_leave():
         start_date = request.form['start_date']
         end_date = request.form['end_date']
         
-        # Get employee_id for current user (simplified)
-        # In production, add proper user-employee mapping
-        all_employees = db.execute('SELECT * FROM employees').fetchall()
-        if not all_employees:
+        # Get employee record for logged-in user
+        employee = db.execute('SELECT id FROM employees WHERE user_id = ?', (session['user_id'],)).fetchone()
+        
+        if not employee:
             flash('No employee record found for your account', 'danger')
+            db.close()
             return redirect(url_for('dashboard'))
         
-        employee_id = all_employees[0]['id']
+        try:
+            # Validate dates
+            start = datetime.strptime(start_date, '%Y-%m-%d')
+            end = datetime.strptime(end_date, '%Y-%m-%d')
+            if end < start:
+                flash('End date must be after start date', 'danger')
+                return render_template('apply_leave.html')
+        except ValueError:
+            flash('Invalid date format', 'danger')
+            return render_template('apply_leave.html')
         
         db.execute('INSERT INTO leaves (employee_id, leave_type, start_date, end_date) VALUES (?, ?, ?, ?)',
-                  (employee_id, leave_type, start_date, end_date))
+                  (employee['id'], leave_type, start_date, end_date))
         db.commit()
         db.close()
         

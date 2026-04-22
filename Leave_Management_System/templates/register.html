@@ -1,29 +1,115 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="login-container">
-    <div class="login-box">
-        <h1>👤 Register New Employee</h1>
-        <form method="POST" action="{{ url_for('register') }}">
-            <div class="form-group">
-                <label for="username">Username:</label>
-                <input type="text" id="username" name="username" required>
+<div class="auth-container">
+    <div class="auth-wrapper">
+        <div class="auth-form-section">
+            <div class="auth-header">
+                <h1 class="auth-title">Create Account</h1>
+                <p class="auth-subtitle">Register as a new employee</p>
             </div>
-            <div class="form-group">
-                <label for="password">Password:</label>
-                <input type="password" id="password" name="password" required>
+
+            <form method="POST" action="{{ url_for('register') }}" class="auth-form">
+                <div class="form-group">
+                    <label for="name" class="form-label">Full Name</label>
+                    <input 
+                        type="text" 
+                        id="name" 
+                        name="name" 
+                        class="form-input" 
+                        placeholder="Enter your full name"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="username" class="form-label">Username</label>
+                    <input 
+                        type="text" 
+                        id="username" 
+                        name="username" 
+                        class="form-input" 
+                        placeholder="Choose a unique username"
+                        required
+                    >
+                    <small class="form-hint">Must be unique and at least 3 characters</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="password" class="form-label">Password</label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        class="form-input" 
+                        placeholder="Enter a strong password"
+                        minlength="6"
+                        required
+                    >
+                    <small class="form-hint">Minimum 6 characters</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="leave_balance" class="form-label">Initial Leave Balance</label>
+                    <input 
+                        type="number" 
+                        id="leave_balance" 
+                        name="leave_balance" 
+                        class="form-input" 
+                        value="20"
+                        min="0"
+                        max="90"
+                        required
+                    >
+                    <small class="form-hint">Number of leave days (default: 20)</small>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-large">Create Account</button>
+            </form>
+
+            <div class="auth-divider">
+                <span>OR</span>
             </div>
-            <div class="form-group">
-                <label for="name">Full Name:</label>
-                <input type="text" id="name" name="name" required>
+
+            <div class="auth-links">
+                <p class="auth-link-text">
+                    Already have an account? 
+                    <a href="{{ url_for('login') }}" class="link-primary">Login here</a>
+                </p>
             </div>
-            <div class="form-group">
-                <label for="leave_balance">Initial Leave Balance:</label>
-                <input type="number" id="leave_balance" name="leave_balance" value="20" min="0" required>
+        </div>
+
+        <div class="auth-info-section">
+            <div class="auth-info-content">
+                <h2>Why Register?</h2>
+                <p>Join our leave management system and enjoy these benefits:</p>
+                
+                <div class="features-list">
+                    <div class="feature-item">
+                        <span class="feature-icon">📱</span>
+                        <span class="feature-text">Easy leave application process</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">📊</span>
+                        <span class="feature-text">Track your leave balance</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">🔒</span>
+                        <span class="feature-text">Secure personal account</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">⏰</span>
+                        <span class="feature-text">View leave history</span>
+                    </div>
+                </div>
+
+                <div class="registration-info" style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.2);">
+                    <p style="font-size: 0.9rem; color: rgba(255,255,255,0.8);">
+                        Your information is secure and will only be used for leave management purposes.
+                    </p>
+                </div>
             </div>
-            <button type="submit" class="btn btn-success">Register</button>
-            <a href="{{ url_for('login') }}" class="btn btn-secondary">Back to Login</a>
-        </form>
+        </div>
     </div>
 </div>
 {% endblock %}
