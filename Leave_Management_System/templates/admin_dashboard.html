@@ -61,11 +61,11 @@
     <div class="sidebar">
         <h2>👑 Admin</h2>
         <ul>
-            <li><a href="#">🏠 Dashboard</a></li>
+<li><a href="{{ url_for('dashboard') }}">🏠 Dashboard</a></li>
             <li><a href="{{ url_for('add_employee') }}">👤 Add Employee</a></li>
             <li><a href="{{ url_for('add_leave') }}">📅 Add Leave</a></li>
-            <li><a href="#">📊 Employees</a></li>
-            <li><a href="#">📁 Leave Records</a></li>
+<li><a href="#employee-list">📊 Employees</a></li>
+<li><a href="#leave-records">📁 Leave Records</a></li>
             <li><a href="{{ url_for('logout') }}">🚪 Logout</a></li>
         </ul>
     </div>
@@ -81,7 +81,7 @@
             </div>
 
             <!-- Employee Section -->
-            <div class="dashboard-section">
+<div class="dashboard-section" id="employee-list">
                 <h2>📊 Employee List</h2>
                 {% if employees %}
                 <table class="table">
@@ -110,7 +110,7 @@
             </div>
 
             <!-- Leave Section -->
-            <div class="dashboard-section">
+<div class="dashboard-section" id="leave-records">
                 <h2>📅 Leave Records</h2>
                 {% if leaves %}
                 <table class="table">

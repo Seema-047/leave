@@ -43,6 +43,12 @@ def init_db():
                     FOREIGN KEY (employee_id) REFERENCES employees(id)
                 );
             ''')
+            # Insert test users
+            admin_pass = hash_password('admin123')
+            emp_pass = hash_password('emp123')
+            db.execute("INSERT OR IGNORE INTO users (username, password, role) VALUES ('admin', ?, 'admin')", (admin_pass,))
+            db.execute("INSERT OR IGNORE INTO users (username, password, role) VALUES ('employee', ?, 'employee')", (emp_pass,))
+            db.execute("INSERT OR IGNORE INTO employees (name, leave_balance) VALUES ('John Doe', 20)")
             db.commit()
             db.close()
 
@@ -102,7 +108,10 @@ def login():
             session['username'] = user['username']
             session['role'] = user['role']
             flash('Login successful!', 'success')
-            return redirect(url_for('dashboard'))
+            if user['role'] == 'admin':
+                return redirect(url_for('admin_dashboard'))
+            else:
+                return redirect(url_for('employee_dashboard'))
         else:
             flash('Invalid username or password', 'danger')
     
@@ -114,43 +123,75 @@ def logout():
     flash('You have been logged out', 'info')
     return redirect(url_for('login'))
 
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        name = request.form['name']
+        leave_balance = int(request.form['leave_balance'])
+        
+        db = get_db()
+        db.row_factory = sqlite3.Row
+        
+        # Check if username exists
+        existing = db.execute('SELECT id FROM users WHERE username = ?', (username,)).fetchone()
+        if existing:
+            flash(f'Username "{username}" already exists. Choose another.', 'danger')
+            db.close()
+            return render_template('register.html')
+        
+        # Insert user
+        hashed_pass = hash_password(password)
+        cursor = db.execute('INSERT INTO users (username, password, role) VALUES (?, ?, "employee")', (username, hashed_pass))
+        user_id = cursor.lastrowid
+        
+        # Insert employee
+        db.execute('INSERT INTO employees (name, leave_balance) VALUES (?, ?)', (name, leave_balance))
+        db.commit()
+        db.close()
+        
+        flash(f'Registered successfully! Welcome {name}. You can now login with your username and password.', 'success')
+        return redirect(url_for('login'))
+    
+    return render_template('register.html')
+
+@app.route('/admin_dashboard')
+@admin_required
+def admin_dashboard():
+    db = get_db()
+    employees = db.execute('SELECT * FROM employees').fetchall()
+    leaves = db.execute('SELECT l.*, e.name FROM leaves l JOIN employees e ON l.employee_id = e.id').fetchall()
+    db.close()
+    return render_template('admin_dashboard.html', employees=employees, leaves=leaves)
+
+@app.route('/employee_dashboard')
+@login_required
+def employee_dashboard():
+    db = get_db()
+    
+    all_employees = db.execute('SELECT * FROM employees').fetchall()
+    employee_id = all_employees[0]['id'] if all_employees else None
+    
+    employee = None
+    leaves = []
+    remaining_balance = 0
+    
+    if employee_id:
+        employee = db.execute('SELECT * FROM employees WHERE id = ?', (employee_id,)).fetchone()
+        leaves = db.execute('SELECT * FROM leaves WHERE employee_id = ?', (employee_id,)).fetchall()
+        remaining_balance = calculate_remaining_balance(db, employee_id)
+    
+    db.close()
+    return render_template('employee_dashboard.html', employee=employee, leaves=leaves, remaining_balance=remaining_balance)
+
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    db = get_db()
-    
     if session['role'] == 'admin':
-        employees = db.execute('SELECT * FROM employees').fetchall()
-        leaves = db.execute('SELECT l.*, e.name FROM leaves l JOIN employees e ON l.employee_id = e.id').fetchall()
-        db.close()
-        return render_template('admin_dashboard.html', employees=employees, leaves=leaves)
+        return redirect(url_for('admin_dashboard'))
     else:
-        # Employee dashboard
-        employee = db.execute('SELECT * FROM employees WHERE id = (SELECT id FROM users WHERE id = ?)', 
-                             (session['user_id'],)).fetchone()
-        
-        # Get employee_id from username
-        user = db.execute('SELECT username FROM users WHERE id = ?', (session['user_id'],)).fetchone()
-        
-        # Try to find employee by checking if there's a matching employee
-        all_employees = db.execute('SELECT * FROM employees').fetchall()
-        employee_id = None
-        
-        # For simplicity, assume first employee is linked to first employee user
-        # In production, you'd have a proper user_id to employee_id mapping
-        if all_employees:
-            employee_id = all_employees[0]['id']
-        
-        leaves = []
-        remaining_balance = 0
-        
-        if employee_id:
-            employee = db.execute('SELECT * FROM employees WHERE id = ?', (employee_id,)).fetchone()
-            leaves = db.execute('SELECT * FROM leaves WHERE employee_id = ?', (employee_id,)).fetchall()
-            remaining_balance = calculate_remaining_balance(db, employee_id)
-        
-        db.close()
-        return render_template('employee_dashboard.html', employee=employee, leaves=leaves, remaining_balance=remaining_balance)
+        return redirect(url_for('employee_dashboard'))
 
 def calculate_remaining_balance(db, employee_id):
     employee = db.execute('SELECT leave_balance FROM employees WHERE id = ?', (employee_id,)).fetchone()

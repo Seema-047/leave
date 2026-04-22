@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="login-container">
+    <div class="login-box">
+        <h1>👤 Register New Employee</h1>
+        <form method="POST" action="{{ url_for('register') }}">
+            <div class="form-group">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <div class="form-group">
+                <label for="name">Full Name:</label>
+                <input type="text" id="name" name="name" required>
+            </div>
+            <div class="form-group">
+                <label for="leave_balance">Initial Leave Balance:</label>
+                <input type="number" id="leave_balance" name="leave_balance" value="20" min="0" required>
+            </div>
+            <button type="submit" class="btn btn-success">Register</button>
+            <a href="{{ url_for('login') }}" class="btn btn-secondary">Back to Login</a>
+        </form>
+    </div>
+</div>
+{% endblock %}
